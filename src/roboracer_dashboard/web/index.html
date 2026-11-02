@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RoboRacer Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>RoboRacer Dashboard</h1>
+    <span id="status" class="pill bad">connecting…</span>
+  </header>
+
+  <main class="grid">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Camera</h2><code>/camera/color/image_raw</code>
+      </div>
+      <div class="panel-body camera-body">
+        <img id="camera" alt="camera stream">
+        <p id="camera-msg" class="overlay">Waiting for web_video_server on :8080 …</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>LiDAR</h2><code>/scan</code><span id="hz-scan" class="hz">0 Hz</span>
+      </div>
+      <div class="panel-body"><canvas id="lidar" title="Mouse wheel: zoom"></canvas></div>
+      <div id="lidar-info" class="panel-foot">waiting for /scan …</div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Odometry</h2><code>/odom</code><span id="hz-odom" class="hz">0 Hz</span>
+        <button id="odom-reset" type="button">Clear path</button>
+      </div>
+      <div class="stats">
+        <div><span>Speed</span><b id="odom-speed">—</b><small id="odom-kmh"></small></div>
+        <div><span>Heading</span><b id="odom-yaw">—</b><small id="odom-yawrate"></small></div>
+        <div><span>Position (x, y)</span><b id="odom-pos">—</b><small>odom frame</small></div>
+      </div>
+      <div class="panel-body"><canvas id="odom"></canvas></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Occupancy grid (SLAM)</h2><code>/map</code><span id="hz-map" class="hz">0 Hz</span>
+      </div>
+      <div class="panel-body"><canvas id="map"></canvas></div>
+      <div id="map-info" class="panel-foot">waiting for /map …</div>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
