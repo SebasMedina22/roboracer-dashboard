@@ -95,6 +95,7 @@ Your home folder is shared and GUI windows open on your desktop. Run `distrobox 
 | `colcon build` fails with `canonicalize_version() got an unexpected keyword argument 'strip_trailing_zero'` | A newer setuptools in `~/.local` shadows Ubuntu's: `pip3 uninstall -y setuptools`, then build again (the script does this) |
 | `rosdep`: `Cannot locate rosdep definition for [ament_python]` | Harmless warning, the install continues |
 | Gazebo closes or is black (WSL) | The shortcuts set `LIBGL_ALWAYS_SOFTWARE=1`; check you used `rr` |
+| Gazebo window black / "Gazebo GUI is not responding" (distrobox, Wayland, NVIDIA laptop) | Re-run `bash scripts/install.sh` so `rr` sets `LIBGL_ALWAYS_SOFTWARE=1 LIBGL_DRI3_DISABLE=1 QT_QPA_PLATFORM=xcb IGN_IP=127.0.0.1`, open a new terminal, `pkill -f "ign gazebo"`, launch again |
 | Car jumps around, `Moved backwards in time` | Two Gazebo launches running → `pkill -f "ign gazebo"; pkill -f ros2; ros2 daemon stop` |
 | Dashboard map panel says "waiting for /map" | Normal: only the SLAM launch publishes `/map` |
 | Gazebo texture error `RealSense_Albedo.png` | Cosmetic, ignore |

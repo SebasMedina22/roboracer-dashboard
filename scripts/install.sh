@@ -112,6 +112,14 @@ fi
 step "6/6 Shortcuts rr / rd in ~/.bashrc"
 GL=""
 $IS_WSL && GL=" && export LIBGL_ALWAYS_SOFTWARE=1"   # WSL: render Gazebo/RViz on the CPU
+if [ -n "${CONTAINER_ID:-}" ] || [ -f /run/.containerenv ]; then
+  # distrobox on a newer Ubuntu (Wayland, often NVIDIA hybrid graphics): Gazebo hangs
+  # with a black window unless it renders on the CPU through X11 (Xwayland).
+  GL="$GL && export LIBGL_ALWAYS_SOFTWARE=1 LIBGL_DRI3_DISABLE=1 QT_QPA_PLATFORM=xcb"
+fi
+# Gazebo server and GUI talk over the network; with Docker/VPN interfaces they can miss
+# each other. Pin them to loopback (IGN_IP for Fortress, GZ_IP for newer Gazebo).
+GL="$GL && export IGN_IP=127.0.0.1 GZ_IP=127.0.0.1"
 sed -i '/# >>> avai-lab >>>/,/# <<< avai-lab <<</d' ~/.bashrc
 cat >> ~/.bashrc <<EOF
 # >>> avai-lab >>>
