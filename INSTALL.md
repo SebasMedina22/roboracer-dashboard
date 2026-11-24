@@ -65,6 +65,8 @@ Your home folder is shared and GUI windows open on your desktop. Run `distrobox 
 | `ros2: command not found` / `Package 'roboracer_…' not found` | Run `rr` (or `rd`) in that terminal |
 | `ModuleNotFoundError: No module named 'ultralytics'` | `pip3 install ultralytics "numpy<2"` |
 | `pip3: command not found` | `sudo apt install -y python3-pip` |
+| `colcon build` fails with `canonicalize_version() got an unexpected keyword argument 'strip_trailing_zero'` | A newer setuptools in `~/.local` shadows Ubuntu's: `pip3 uninstall -y setuptools`, then build again (the script does this) |
+| `rosdep`: `Cannot locate rosdep definition for [ament_python]` | Harmless warning, the install continues |
 | Gazebo closes or is black (WSL) | The shortcuts set `LIBGL_ALWAYS_SOFTWARE=1`; check you used `rr` |
 | Car jumps around, `Moved backwards in time` | Two Gazebo launches running → `pkill -f "ign gazebo"; pkill -f ros2; ros2 daemon stop` |
 | Dashboard map panel says "waiting for /map" | Normal: only the SLAM launch publishes `/map` |

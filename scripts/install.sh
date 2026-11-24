@@ -68,6 +68,13 @@ else
 fi
 # numpy 2 breaks cv_bridge on Humble; keep it below 2 even if something upgraded it
 pip3 install "numpy<2"
+# A pip-installed setuptools in ~/.local shadows Ubuntu's and breaks `colcon build` of
+# ament_python packages (TypeError: canonicalize_version() ... 'strip_trailing_zero').
+# Remove only that user copy; the system setuptools stays.
+if pip3 show setuptools 2>/dev/null | grep -q "^Location: $HOME/.local"; then
+  warn "Removing user-installed setuptools from ~/.local (breaks colcon on Humble)"
+  pip3 uninstall -y setuptools
+fi
 
 # --- 4. rrstack (professor's repo: we only clone/pull, never edit) -----------
 step "4/6 rrstack"
