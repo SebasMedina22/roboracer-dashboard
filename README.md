@@ -20,27 +20,33 @@ web/ files ──► web_server node (:8000, plain HTTP) ───────�
 The page uses the same host it was loaded from, so on the real car you open
 `http://<jetson-ip>:8000` from a laptop and everything points at the Jetson.
 
-## Requirements
+## Quick start
+
+Ubuntu 22.04 (native, WSL2, or distrobox). Full guide and troubleshooting: **[INSTALL.md](INSTALL.md)**.
 
 ```bash
-sudo apt install -y ros-humble-rosbridge-suite ros-humble-web-video-server
-```
-
-## Build
-
-```bash
+git clone https://github.com/SebasMedina22/roboracer-dashboard.git ~/dashboard_ws
 cd ~/dashboard_ws
-colcon build --symlink-install
-source install/setup.bash
+bash scripts/install.sh        # ROS 2 Humble, Gazebo, YOLO, rrstack, this dashboard, shortcuts rr / rd
 ```
 
-## Run
+Then, in a **new** terminal for each line:
 
-1. A simulation (only ONE launch that opens Gazebo), e.g. `ros2 launch roboracer_slam sim_slam_rviz.launch.py`
-2. `ros2 launch roboracer_dashboard dashboard.launch.py`
-3. Open <http://localhost:8000>
+| Terminal | Commands |
+|---|---|
+| T1 | `rr` then `ros2 launch roboracer_planning cone_drive.launch.py` (simulation; only ONE launch that opens Gazebo) |
+| T2 | `rd` then `ros2 launch roboracer_dashboard dashboard.launch.py` |
+| Browser | <http://localhost:8000> |
+
+The occupancy-grid panel needs `/map`, which only the SLAM launch publishes: `ros2 launch roboracer_slam sim_slam_rviz.launch.py`.
+
+## Repository layout
+
+This repo is a colcon workspace: the package lives in `src/roboracer_dashboard/`, and `build/ install/ log/` are git-ignored. `scripts/install.sh` sets up everything else.
 
 ## Files
+
+Paths relative to `src/roboracer_dashboard/`.
 
 | File | What it does |
 |---|---|
