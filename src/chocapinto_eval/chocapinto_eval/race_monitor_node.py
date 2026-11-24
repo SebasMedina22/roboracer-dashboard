@@ -56,6 +56,7 @@ class RaceMonitorNode(Node):
         p('max_wall_time', 0.0)          # 0 = no limit (run_eval.sh sets one)
         p('rate', 20.0)                  # samples per second of simulation time
         p('odom_wait', 5.0)              # s of sim time to wait for /odom before starting
+        p('progress_period', 10.0)       # progress line every N s of sim time (0 = off)
         p('out_dir', '~/avai_runs')
         p('run_name', '')
         g = self.get_parameter
@@ -65,6 +66,7 @@ class RaceMonitorNode(Node):
         self.controller_node = str(g('controller_node').value)
         self.max_wall_time = float(g('max_wall_time').value)
         self.odom_wait = float(g('odom_wait').value)
+        self.progress_period = float(g('progress_period').value)
         run_name = str(g('run_name').value) or datetime.now().strftime('%Y%m%d_%H%M%S')
         self.run_dir = os.path.join(os.path.expanduser(str(g('out_dir').value)), run_name)
 
@@ -84,6 +86,7 @@ class RaceMonitorNode(Node):
         self._wall_start = time.monotonic()
         self._started_iso = datetime.now().isoformat(timespec='seconds')
         self.finished = False
+        self._progress_mark: Optional[tuple] = None    # (sim t, wall t, row index)
 
         self.create_subscription(TFMessage, str(g('ground_truth_topic').value),
                                  self._on_truth, qos_profile_sensor_data)
@@ -140,8 +143,30 @@ class RaceMonitorNode(Node):
             if ev.kind in ('lap', 'contact', 'stuck', 'end'):
                 self.get_logger().info(f'[{ev.kind}] t={ev.t:.1f}s ({ev.x:.2f}, {ev.y:.2f}) '
                                        f'{ev.detail}')
+        self._progress(t)
         if self.monitor.done:
             self.finished = True
+
+    def _progress(self, t: float) -> None:
+        """Every progress_period s of sim time: distance, lap, speed, closest cone, RTF."""
+        if self.progress_period <= 0 or not self.monitor.rows:
+            return
+        wall = time.monotonic()
+        if self._progress_mark is None:
+            self._progress_mark = (t, wall, len(self.monitor.rows))
+            return
+        t0, w0, i0 = self._progress_mark
+        if t - t0 < self.progress_period:
+            return
+        rows = self.monitor.rows[i0:]
+        last = self.monitor.rows[-1]
+        closest = min(r['clearance'] for r in rows)
+        rtf = (t - t0) / (wall - w0) if wall > w0 else float('nan')
+        self.get_logger().info(
+            f"[progress] sim {last['t']:.0f} s | {self.monitor.summary()['distance']:.0f} m | "
+            f"lap {last['lap']}/{self.params.laps_target} | {last['speed']:.2f} m/s | "
+            f'closest cone {closest:.2f} m | RTF {rtf:.2f}')
+        self._progress_mark = (t, wall, len(self.monitor.rows))
 
     # ------------------------------------------------------------ output
     def write_results(self, reason_if_running: str = 'interrupted') -> str:
