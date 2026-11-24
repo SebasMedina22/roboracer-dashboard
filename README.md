@@ -40,9 +40,15 @@ Then, in a **new** terminal for each line:
 
 The occupancy-grid panel needs `/map`, which only the SLAM launch publishes: `ros2 launch roboracer_slam sim_slam_rviz.launch.py`.
 
+## Evaluated simulation runs
+
+`bash scripts/run_eval.sh -n 5 -l 3` runs the cone pipeline 5 times headless and measures each run
+against Gazebo's true pose (laps, lap times, cone contacts, clearance, odometry drift). See
+[INSTALL.md](INSTALL.md#2c-evaluated-simulation-runs-no-watching-needed).
+
 ## Repository layout
 
-This repo is a colcon workspace: the package lives in `src/roboracer_dashboard/`, and `build/ install/ log/` are git-ignored. `scripts/install.sh` sets up everything else.
+This repo is a colcon workspace: `src/roboracer_dashboard/` (dashboard) and `src/chocapinto_eval/` (evaluation, simulation only), and `build/ install/ log/` are git-ignored. `scripts/install.sh` sets up everything else.
 
 ## Files
 

@@ -54,7 +54,8 @@ sudo apt-get install -y \
   ros-humble-ackermann-msgs ros-humble-cv-bridge ros-humble-slam-toolbox \
   ros-humble-nav2-map-server ros-humble-teleop-twist-keyboard \
   ros-humble-rosbridge-suite ros-humble-web-video-server \
-  python3-colcon-common-extensions python3-rosdep python3-pip git
+  python3-colcon-common-extensions python3-rosdep python3-pip git \
+  python3-matplotlib python3-scipy python3-pytest
 
 # --- 3. Python: YOLO ---------------------------------------------------------
 step "3/6 Python packages (YOLO)"

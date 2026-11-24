@@ -73,6 +73,36 @@ ros2 bag record -o lap1 /scan /odom /tf /tf_static \
   /camera/realsense2_camera/aligned_depth_to_color/image_raw
 ```
 
+## 2c. Evaluated simulation runs (no watching needed)
+
+`scripts/run_eval.sh` runs the course's cone pipeline headless, measures every run against
+Gazebo's true pose and writes the results to a folder. Nothing in `~/rrstack` is modified;
+the guard (`scripts/check_rrstack_clean.sh`) checks that before and after every run.
+
+```bash
+# once: where results go (here a Windows folder, readable from Windows)
+echo 'export AVAI_RUNS_DIR=/mnt/c/Users/<you>/Documents/avai_runs' >> ~/.bashrc && source ~/.bashrc
+
+bash scripts/run_eval.sh                 # 1 run, 3 laps, max 10 real minutes
+bash scripts/run_eval.sh -n 5 -l 3       # 5 runs in a row
+bash scripts/run_eval.sh --gui -l 1      # watch one lap in the Gazebo window
+```
+
+| Option | Meaning | Default |
+|---|---|---|
+| `-n N` | runs in a row | 1 |
+| `-l LAPS` | laps per run | 3 |
+| `--rtf X` | simulation speed limit (`1` = real time, `max` = no limit); only matters if the PC runs faster than 1x | 1 |
+| `--max-wall MIN` | real minutes per run | 10 |
+| `--keep-going` | do not stop at the first cone contact | stop |
+| `--gui` | show Gazebo | headless |
+| `-o DIR` | results folder | `$AVAI_RUNS_DIR` or `~/avai_runs` |
+
+A run ends by itself when the laps are done, at a cone contact, when the car is stuck (< 0.05 m/s
+for 5 s), or at the time limit. Each run folder has `summary.json` (laps, lap times, speeds,
+contacts, minimum clearance, odometry drift), `trajectory.csv`, `events.csv`, `run.png` and
+`launch.log`; each batch adds `batch_<date>.csv` with one line per run.
+
 ## 3. Newer Ubuntu (24.04, 26.04, …): use distrobox
 
 ```bash
