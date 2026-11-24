@@ -51,6 +51,47 @@
       <div class="panel-body"><canvas id="map"></canvas></div>
       <div id="map-info" class="panel-foot">waiting for /map …</div>
     </section>
+
+    <section class="panel wide">
+      <div class="split">
+        <div class="half monitor">
+          <div class="panel-head">
+            <h2>Run monitor</h2><code id="topic-status">/eval/status</code>
+            <code id="mon-run"></code>
+            <span id="mon-state" class="pill muted">not running</span>
+          </div>
+          <p id="mon-idle" class="idle">No evaluation running. Start one with
+            <code>bash scripts/run_eval.sh</code> (simulation only).</p>
+          <div id="mon-body" hidden>
+            <div class="stats stats-4">
+              <div><span>Sim time</span><b id="mon-simt">—</b><small id="mon-rtf"></small></div>
+              <div><span>Lap</span><b id="mon-lap">—</b><small id="mon-dist"></small></div>
+              <div><span>Speed</span><b id="mon-speed">—</b><small id="mon-mode"></small></div>
+              <div><span>Closest cone</span><b id="mon-clear">—</b><small id="mon-minclear"></small></div>
+            </div>
+            <div class="mon-line"><span>Contacts</span> <b id="mon-contacts">0</b>
+              <small id="mon-drift"></small></div>
+            <table class="laps">
+              <thead><tr><th>Lap</th><th>Time</th><th>Avg speed</th><th>Min clearance</th><th>Contacts</th></tr></thead>
+              <tbody id="mon-laps"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="half logs">
+          <div class="panel-head">
+            <h2>Logs</h2><code id="topic-rosout">/rosout</code>
+            <span class="filters">
+              <button id="log-all" type="button">All</button>
+              <button id="log-warn" type="button">Warnings+</button>
+              <button id="log-monitor" type="button">Monitor</button>
+              <button id="log-clear" type="button">Clear</button>
+            </span>
+          </div>
+          <div id="log-list" class="log-list"></div>
+          <div id="log-count" class="panel-foot">waiting for /rosout …</div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script type="module" src="js/main.js"></script>

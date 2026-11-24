@@ -16,10 +16,12 @@ export class RosBridge {
 
   // Register a callback for a topic. throttleMs asks rosbridge to send at most
   // one message every throttleMs (protects the browser from big/fast topics).
-  subscribe(topic, type, callback, throttleMs = 0) {
+  // queueLength 1 = only the newest message; use more for topics where every message
+  // matters (logs).
+  subscribe(topic, type, callback, throttleMs = 0, queueLength = 1) {
     let sub = this.subs.get(topic);
     if (!sub) {
-      sub = { type, throttleMs, callbacks: [], count: 0, hz: 0 };
+      sub = { type, throttleMs, queueLength, callbacks: [], count: 0, hz: 0 };
       this.subs.set(topic, sub);
       if (this.connected) this._sendSubscribe(topic, sub);
     }
@@ -73,7 +75,7 @@ export class RosBridge {
       topic,
       type: sub.type,
       throttle_rate: sub.throttleMs,
-      queue_length: 1,               // only the newest message, never a backlog
+      queue_length: sub.queueLength, // 1 = only the newest message, never a backlog
     }));
   }
 

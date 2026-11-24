@@ -4,6 +4,8 @@ import { RosBridge } from './rosbridge.js';
 import { createLidarPanel } from './lidar.js';
 import { createOdomPanel } from './odom.js';
 import { createMapPanel } from './map.js';
+import { createMonitorPanel } from './monitor.js';
+import { createLogsPanel } from './logs.js';
 
 // Default topic names (simulation). Any of them can be overridden from the URL,
 // without editing code:
@@ -15,6 +17,8 @@ const DEFAULT_TOPICS = {
   odom: '/odom',
   map: '/map',
   tf: '/tf',
+  status: '/eval/status',
+  rosout: '/rosout',
 };
 const CAR_TOPICS = { camera: '/camera/realsense2_camera/color/image_raw' };
 
@@ -33,7 +37,7 @@ const VIDEO_URL = `http://${HOST}:8080/stream?topic=${TOPICS.camera}&type=mjpeg&
 const $ = (id) => document.getElementById(id);
 
 // Show the topic names actually in use in the panel headers.
-for (const key of ['camera', 'scan', 'odom', 'map']) {
+for (const key of ['camera', 'scan', 'odom', 'map', 'status', 'rosout']) {
   const el = $(`topic-${key}`);
   if (el) el.textContent = TOPICS[key];
 }
@@ -69,12 +73,24 @@ const odom = createOdomPanel($('odom'), {
   yawRate: $('odom-yawrate'), pos: $('odom-pos'),
 });
 const map = createMapPanel($('map'), $('map-info'));
+const monitor = createMonitorPanel({
+  state: $('mon-state'), run: $('mon-run'), body: $('mon-body'), idle: $('mon-idle'),
+  simt: $('mon-simt'), rtf: $('mon-rtf'), lap: $('mon-lap'), dist: $('mon-dist'),
+  speed: $('mon-speed'), clear: $('mon-clear'), minclear: $('mon-minclear'), mode: $('mon-mode'),
+  contacts: $('mon-contacts'), drift: $('mon-drift'), laps: $('mon-laps'),
+});
+const logs = createLogsPanel($('log-list'), {
+  all: $('log-all'), warn: $('log-warn'), monitor: $('log-monitor'), clear: $('log-clear'),
+}, $('log-count'));
 
 //            topic        message type                     callback          max every (ms)
 ros.subscribe(TOPICS.scan, 'sensor_msgs/msg/LaserScan',     lidar.update,     100);
 ros.subscribe(TOPICS.odom, 'nav_msgs/msg/Odometry',         odom.update,      50);
 ros.subscribe(TOPICS.map,  'nav_msgs/msg/OccupancyGrid',    map.updateMap,    2000);
 ros.subscribe(TOPICS.tf,   'tf2_msgs/msg/TFMessage',        map.updateTf,     50);
+ros.subscribe(TOPICS.status, 'std_msgs/msg/String',         monitor.update,   0);
+// every log line matters: no throttling, and a queue so bursts are not dropped
+ros.subscribe(TOPICS.rosout, 'rcl_interfaces/msg/Log',      logs.add,         0, 200);
 
 $('odom-reset').onclick = () => odom.reset();
 

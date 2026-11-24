@@ -7,6 +7,8 @@ Subscribes:
   /eval/ground_truth  tf2_msgs/TFMessage  Gazebo's dynamic_pose/info, bridged (true pose)
   /odom               nav_msgs/Odometry   pose according to wheel odometry
   /rosout             rcl_interfaces/Log  the pursuit node's "mode: ..." messages
+Publishes:
+  /eval/status        std_msgs/String     JSON, once per real second (for the dashboard)
 Writes, when the run ends (laps done, contact, stuck, time limit or Ctrl+C):
   <out_dir>/<run_name>/summary.json, trajectory.csv, events.csv
 """
@@ -25,12 +27,24 @@ from nav_msgs.msg import Odometry
 from rcl_interfaces.msg import Log
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
+from std_msgs.msg import String
 from tf2_msgs.msg import TFMessage
 
 from .metrics import (MonitorParams, Pose2D, RunMonitor, load_cones_from_world,
                       yaw_from_quaternion)
 
 MODE_RE = re.compile(r'^mode:\s*(\S+)')
+
+
+def json_safe(value):
+    """NaN / inf are not valid JSON: turn them into null, recursively."""
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, dict):
+        return {k: json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(v) for v in value]
+    return value
 
 
 def default_world_file() -> str:
@@ -57,6 +71,7 @@ class RaceMonitorNode(Node):
         p('rate', 20.0)                  # samples per second of simulation time
         p('odom_wait', 5.0)              # s of sim time to wait for /odom before starting
         p('progress_period', 10.0)       # progress line every N s of sim time (0 = off)
+        p('status_topic', '/eval/status')
         p('out_dir', '~/avai_runs')
         p('run_name', '')
         g = self.get_parameter
@@ -87,6 +102,11 @@ class RaceMonitorNode(Node):
         self._started_iso = datetime.now().isoformat(timespec='seconds')
         self.finished = False
         self._progress_mark: Optional[tuple] = None    # (sim t, wall t, row index)
+        self._mode = ''
+        self._status_mark: Optional[tuple] = None      # (sim t, wall t) of the last status
+        self._status_rtf = float('nan')
+        self.run_name = run_name
+        self._status_pub = self.create_publisher(String, str(g('status_topic').value), 10)
 
         self.create_subscription(TFMessage, str(g('ground_truth_topic').value),
                                  self._on_truth, qos_profile_sensor_data)
@@ -122,11 +142,13 @@ class RaceMonitorNode(Node):
             return
         m = MODE_RE.match(msg.msg)
         if m:
+            self._mode = m.group(1)
             self.monitor.add_mode(self._sim_time(), m.group(1))
 
     def _tick(self) -> None:
         if self.finished:
             return
+        self._publish_status()
         if self.max_wall_time > 0 and time.monotonic() - self._wall_start > self.max_wall_time:
             self.monitor.finish(self._sim_time(), 'wall_time_limit')
             self.finished = True
@@ -168,6 +190,40 @@ class RaceMonitorNode(Node):
             f'closest cone {closest:.2f} m | RTF {rtf:.2f}')
         self._progress_mark = (t, wall, len(self.monitor.rows))
 
+    def _publish_status(self, force: bool = False) -> None:
+        """Live state for the dashboard, at most once per real second (and at the end)."""
+        wall = time.monotonic()
+        t = self._sim_time()
+        if not force and self._status_mark is not None and wall - self._status_mark[1] < 1.0:
+            return
+        if self._status_mark is not None and wall > self._status_mark[1]:
+            self._status_rtf = (t - self._status_mark[0]) / (wall - self._status_mark[1])
+        self._status_mark = (t, wall)
+        s = self.monitor.summary()
+        last = self.monitor.rows[-1] if self.monitor.rows else {}
+        if self.monitor.done:
+            state = 'done'
+        elif self.monitor.rows:
+            state = 'running'
+        else:
+            state = 'waiting'
+        status = {
+            'run': self.run_name, 'state': state, 'end_reason': self.monitor.end_reason,
+            'sim_t': last.get('t', 0.0), 'rtf': None if math.isnan(self._status_rtf)
+            else round(self._status_rtf, 3),
+            'lap': len(self.monitor.laps) + (0 if self.monitor.done else 1),
+            'laps_target': self.params.laps_target, 'laps_completed': s['laps_completed'],
+            'distance': s['distance'], 'speed': last.get('speed'),
+            'clearance': last.get('clearance'), 'min_clearance': s['min_clearance'],
+            'contacts': s['contacts'], 'mode': self._mode, 'drift_xy': s['odom_drift_xy'],
+            'laps': [{k: lap[k] for k in ('lap', 'time', 'avg_speed', 'min_clearance',
+                                          'contacts')} for lap in s['laps']],
+            'last_contact': s['contact_events'][-1]['detail'] if s['contact_events'] else '',
+        }
+        msg = String()
+        msg.data = json.dumps(json_safe(status), allow_nan=False, default=str)
+        self._status_pub.publish(msg)
+
     # ------------------------------------------------------------ output
     def write_results(self, reason_if_running: str = 'interrupted') -> str:
         if not self.monitor.done:
@@ -180,6 +236,10 @@ class RaceMonitorNode(Node):
             self.monitor.done = True
             self.monitor.end_reason = ('no_true_pose' if self._first_truth_t is None
                                        else reason_if_running)
+        try:
+            self._publish_status(force=True)
+        except Exception:                            # publisher gone after shutdown
+            pass
         os.makedirs(self.run_dir, exist_ok=True)
         wall = time.monotonic() - self._wall_start
         summary = self.monitor.summary()
