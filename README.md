@@ -56,4 +56,4 @@ Paths relative to `src/roboracer_dashboard/`.
 | `web/js/lidar.js` | LaserScan polar → x/y plot |
 | `web/js/odom.js` | Speed, heading, position, trajectory |
 | `web/js/map.js` | OccupancyGrid → image, car pose via TF (map→odom→base_link) |
-| `web/js/main.js` | Wires topics to panels |
+| `web/js/main.js` | Wires topics to panels; topic names can be overridden from the URL (`?car`, `?camera=…`, `?scan=…`) |

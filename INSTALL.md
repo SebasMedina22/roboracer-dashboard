@@ -46,6 +46,33 @@ ros2 launch roboracer_slam sim_slam_rviz.launch.py                 # SLAM map in
 
 Only **one** launch that opens Gazebo at a time.
 
+## 2b. Real car (Jetson)
+
+The dashboard runs **on the Jetson**, and any laptop on the lab network opens it in a browser. (A dashboard inside WSL2 usually cannot see the car's topics: WSL2's NAT blocks DDS discovery.)
+
+```bash
+ssh chocapinto@192.168.3.2
+ros2 pkg list | grep -E "rosbridge_server|web_video_server"   # both must appear
+# if missing (needs sudo + internet on the Jetson):
+#   sudo apt install -y ros-humble-rosbridge-suite ros-humble-web-video-server
+git clone https://github.com/SebasMedina22/roboracer-dashboard.git ~/dashboard_ws
+#   no internet on the Jetson? from the laptop: scp -r ~/dashboard_ws/src chocapinto@192.168.3.2:~/dashboard_ws/
+cd ~/dashboard_ws && source /opt/ros/humble/setup.bash && colcon build --symlink-install
+source install/setup.bash
+ros2 topic list                                   # note the real topic names first
+ros2 launch roboracer_dashboard dashboard.launch.py
+```
+
+On the laptop open **<http://192.168.3.2:8000/?car>**. `?car` selects the RealSense camera topic (`/camera/realsense2_camera/color/image_raw`). Any topic can be overridden in the URL if `ros2 topic list` shows other names, e.g. `?car&scan=/scan_filtered` or `?camera=/some/image_raw` (keys: `camera`, `scan`, `odom`, `map`, `tf`).
+
+Record sensor data for offline development (stop with Ctrl+C):
+
+```bash
+ros2 bag record -o lap1 /scan /odom /tf /tf_static \
+  /camera/realsense2_camera/color/image_raw /camera/realsense2_camera/color/camera_info \
+  /camera/realsense2_camera/aligned_depth_to_color/image_raw
+```
+
 ## 3. Newer Ubuntu (24.04, 26.04, …): use distrobox
 
 ```bash
