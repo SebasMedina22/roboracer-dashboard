@@ -19,7 +19,6 @@ setup(
     maintainer_email='sebastianmedina063@gmail.com',
     description='Automatic evaluation of simulation runs: laps, cone contacts, odometry drift.',
     license='MIT',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'race_monitor = chocapinto_eval.race_monitor_node:main',
