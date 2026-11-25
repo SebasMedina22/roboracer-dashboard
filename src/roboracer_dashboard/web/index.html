@@ -15,7 +15,7 @@
   <main class="grid">
     <section class="panel">
       <div class="panel-head">
-        <h2>Camera</h2><code id="topic-camera">/camera/color/image_raw</code>
+        <h2>Camera</h2><select id="topic-camera" class="topic-select" aria-label="camera topic"></select>
       </div>
       <div class="panel-body camera-body">
         <img id="camera" alt="camera stream">
@@ -25,7 +25,7 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2>LiDAR + cones</h2><code id="topic-scan">/scan</code><span id="hz-scan" class="hz">0 Hz</span>
+        <h2>LiDAR + cones</h2><select id="topic-scan" class="topic-select" aria-label="scan topic"></select><span id="hz-scan" class="hz">0 Hz</span>
       </div>
       <div class="panel-body"><canvas id="lidar" title="Mouse wheel: zoom"></canvas></div>
       <div id="lidar-info" class="panel-foot">waiting for /scan …</div>
@@ -33,7 +33,7 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Odometry</h2><code id="topic-odom">/odom</code><span id="hz-odom" class="hz">0 Hz</span>
+        <h2>Odometry</h2><select id="topic-odom" class="topic-select" aria-label="odom topic"></select><span id="hz-odom" class="hz">0 Hz</span>
         <button id="odom-reset" type="button">Clear path</button>
       </div>
       <div class="stats">
@@ -46,7 +46,7 @@
 
     <section class="panel">
       <div class="panel-head">
-        <h2>Occupancy grid (SLAM)</h2><code id="topic-map">/map</code><span id="hz-map" class="hz">0 Hz</span>
+        <h2>Occupancy grid (SLAM)</h2><select id="topic-map" class="topic-select" aria-label="map topic"></select><span id="hz-map" class="hz">0 Hz</span>
       </div>
       <div class="panel-body"><canvas id="map"></canvas></div>
       <div id="map-info" class="panel-foot">waiting for /map …</div>

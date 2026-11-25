@@ -9,6 +9,8 @@ export class RosBridge {
   constructor(url) {
     this.url = url;
     this.subs = new Map();          // topic -> {type, throttleMs, callbacks[], count, hz}
+    this.pending = new Map();       // service call id -> {resolve, reject, timer}
+    this.nextId = 1;
     this.onStatus = () => {};       // called with true/false when (dis)connected
     this._connect();
     setInterval(() => this._updateRates(), 1000);
@@ -26,6 +28,27 @@ export class RosBridge {
       if (this.connected) this._sendSubscribe(topic, sub);
     }
     sub.callbacks.push(callback);
+  }
+
+  // Stop receiving a topic (used when a panel switches to another topic).
+  unsubscribe(topic) {
+    if (!this.subs.delete(topic)) return;
+    if (this.connected) this.ws.send(JSON.stringify({ op: 'unsubscribe', topic }));
+  }
+
+  // Call a ROS service; resolves with the response values, rejects after timeoutMs
+  // or if the service fails (e.g. rosapi not running).
+  callService(service, type, args = {}, timeoutMs = 3000) {
+    if (!this.connected) return Promise.reject(new Error('not connected'));
+    const id = `call_${this.nextId++}`;
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`${service}: timeout`));
+      }, timeoutMs);
+      this.pending.set(id, { resolve, reject, timer });
+      this.ws.send(JSON.stringify({ op: 'call_service', id, service, type, args }));
+    });
   }
 
   // Messages per second actually received for a topic (after throttling).
@@ -57,6 +80,15 @@ export class RosBridge {
         data = JSON.parse(event.data.replace(/\bNaN\b|-?\bInfinity\b/g, 'null'));
       } catch (err) {
         console.warn('Could not parse rosbridge message', err);
+        return;
+      }
+      if (data.op === 'service_response') {
+        const call = this.pending.get(data.id);
+        if (!call) return;
+        this.pending.delete(data.id);
+        clearTimeout(call.timer);
+        if (data.result === false) call.reject(new Error(String(data.values)));
+        else call.resolve(data.values);
         return;
       }
       if (data.op !== 'publish') return;

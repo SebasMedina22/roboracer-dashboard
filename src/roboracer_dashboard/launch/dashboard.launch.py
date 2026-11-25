@@ -8,10 +8,20 @@ wall_follow.launch.py), then:
 and open http://localhost:8000 in the browser.
 """
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
+from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
+
+
+def rosapi_or_warning():
+    try:
+        get_package_share_directory('rosapi')
+    except PackageNotFoundError:
+        return LogInfo(msg='[dashboard] rosapi not installed: automatic topic detection off '
+                           '(sudo apt install ros-humble-rosbridge-suite)')
+    return Node(package='rosapi', executable='rosapi_node', name='rosapi', output='screen')
 
 
 def generate_launch_description():
@@ -29,6 +39,10 @@ def generate_launch_description():
             parameters=[{'port': 9090}],
             output='screen',
         ),
+
+        # Topic list for the page's automatic topic detection (service /rosapi/topics).
+        # Optional: without rosapi the page simply uses the default / URL topic names.
+        rosapi_or_warning(),
 
         # sensor_msgs/Image -> MJPEG video over HTTP (http://<host>:8080)
         Node(
