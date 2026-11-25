@@ -67,7 +67,27 @@ On the laptop open **<http://192.168.3.2:8000/?car>**. The camera, LiDAR, odomet
 
 The LiDAR panel also draws what the cone pipeline sees: YOLO's cones (`/cones/blue`, `/cones/yellow`) as blue/yellow dots and Delaunay's path (`/waypoints`) as a magenta line. Detections older than 1 s disappear, and the cones are drawn even without `/scan` (e.g. only `yolo_node` running).
 
-Record sensor data for offline development (stop with Ctrl+C):
+### Helper on the Jetson: `scripts/car.sh`
+
+Finds the real topic names by itself (camera prefix, depth image) and saves everything in
+`~/avai_car/<date>/` so it can be copied to the laptop afterwards.
+
+```bash
+bash scripts/car.sh info                 # topics, types, rates, nodes, free disk -> info_<time>.txt
+bash scripts/car.sh dashboard            # dashboard + the URL to open on the laptop
+bash scripts/car.sh record vuelta1 90    # rosbag of the right topics, stops after 90 s (or ONE Ctrl+C)
+bash scripts/car.sh yolo                 # only YOLO on the real camera (nothing drives)
+bash scripts/car.sh drive 0.5            # the course's autonomous pipeline, max 0.5 m/s (asks "yes")
+```
+
+On the laptop (WSL), copy the results to `C:\Users\Asus\Documents\avai_bags`:
+
+```bash
+bash scripts/fetch_car.sh                # small files only (info, logs, bag summaries)
+bash scripts/fetch_car.sh --bag vuelta1  # plus one rosbag (can be GBs)
+```
+
+Manual equivalent of `car.sh record` (stop with Ctrl+C):
 
 ```bash
 ros2 bag record -o lap1 /scan /odom /tf /tf_static \
