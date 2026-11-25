@@ -50,6 +50,16 @@ load_topics() {
 }
 topic_names() { load_topics; echo "$TOPICS_T" | awk '{print $1}'; }
 has_topic()   { topic_names | grep -qx -- "$1"; }
+# Number of publishers. A topic can be listed only because someone SUBSCRIBES to it
+# (e.g. the dashboard): then nothing is actually sent on it.
+publishers()  { timeout 10 ros2 topic info "$1" 2> /dev/null | awk '/Publisher count/ {print $3}'; }
+
+# Messages per second over 4 s, or 0 if nothing arrived.
+rate_of() {
+  local r
+  r="$(timeout -s INT 4 ros2 topic hz "$1" 2>&1 | awk '/average rate/ {v=$3} END {print v}')"
+  echo "${r:-0}"
+}
 
 # Camera prefix: the part before /color/image_raw (RealSense: /camera/realsense2_camera,
 # /camera/camera, ... ; simulator: /camera). CAMERA_PREFIX overrides.
@@ -83,6 +93,14 @@ detect() {
   [ -n "$DEPTH" ] || warn "no depth image under $CAM (YOLO needs it for distances)"
 }
 
+topic_state() {   # "yes (N publishers)" / "listed, but NO publisher" / "no"
+  local n
+  if ! has_topic "$1"; then echo "no"; return; fi
+  n="$(publishers "$1")"
+  if [ "${n:-0}" -gt 0 ]; then echo "yes ($n publisher$([ "$n" -gt 1 ] && echo s))"
+  else echo "listed, but NO publisher (only subscribers)"; fi
+}
+
 print_detected() {
   say "camera prefix : ${CAM:-NOT FOUND}"
   say "colour image  : ${COLOR:--}"
@@ -90,7 +108,7 @@ print_detected() {
   say "depth image   : ${DEPTH:--}"
   local t
   for t in /scan /odom /drive /joy /cones/blue /cones/yellow /waypoints; do
-    if has_topic "$t"; then say "$(printf '%-14s: yes' "$t")"; else say "$(printf '%-14s: no' "$t")"; fi
+    say "$(printf '%-14s: %s' "$t" "$(topic_state "$t")")"
   done
 }
 
@@ -104,24 +122,34 @@ source_rrstack() {
 
 # ---------------------------------------------------------------- commands
 cmd_info() {
-  local out="$SESSION/info_$STAMP.txt" t
+  local out="$SESSION/info_$STAMP.txt" t r detected rates="" nodata=0
   load_topics
   detect
+  detected="$(print_detected 2>&1)"
+  echo "$detected"
+  say "measuring data rates (4 s per topic) ..."
+  for t in /scan /odom "$COLOR" "$DEPTH"; do
+    if [ -z "$t" ] || ! has_topic "$t"; then continue; fi
+    r="$(rate_of "$t")"
+    if [ "$r" = "0" ]; then
+      rates+="$(printf '[car] %-40s NO DATA in 4 s' "$t")"$'\n'; nodata=$((nodata + 1))
+    else
+      rates+="$(printf '[car] %-40s %s Hz' "$t" "$r")"$'\n'
+    fi
+  done
+  printf '%s' "$rates"
+  say "free disk     : $(free_gb) GB"
+  if [ "$nodata" -gt 0 ]; then
+    warn "$nodata sensor topic(s) send NO DATA: drivers/simulation not running yet? Recording now would be empty."
+  fi
   {
     echo "# car info $(date -Iseconds) on $(hostname)"
-    echo; echo "## detected"; print_detected 2>&1
+    echo; echo "## detected"; echo "$detected"
+    echo; echo "## rates (4 s each)"; printf '%s' "$rates"
     echo; echo "## free disk"; df -h "$SESSION"
     echo; echo "## nodes"; timeout 15 ros2 node list 2>&1
     echo; echo "## topics (name [type])"; echo "$TOPICS_T"
-    echo; echo "## rates (4 s each)"
-    for t in /scan /odom "$COLOR" "$DEPTH"; do
-      if [ -z "$t" ] || ! has_topic "$t"; then continue; fi
-      echo "### $t"
-      timeout -s INT 4 ros2 topic hz "$t" 2>&1 | grep -E 'average rate' | tail -n 1
-    done
   } > "$out"
-  print_detected
-  say "free disk     : $(free_gb) GB"
   say "saved -> $out"
 }
 
@@ -177,6 +205,14 @@ cmd_record() {
     ros2 bag info "$dir" > "$dir/bag_info.txt" 2>&1
     grep -E 'Duration|Messages|Bag size' "$dir/bag_info.txt" | sed 's/^/[car]   /'
     say "saved -> $dir ($(du -sh "$dir" | cut -f1))"
+    # sensor topics that got nothing: the bag is useless for them
+    local empty
+    empty="$(grep -oE 'Topic: [^ ]+ \| Type: [^ ]+ \| Count: 0\b' "$dir/bag_info.txt" \
+             | awk '{print $2}' | grep -vE '^/(tf_static|drive|joy|cones/.*|waypoints)$')"
+    if [ -n "$empty" ]; then
+      warn "NO messages recorded on: $(echo "$empty" | tr '\n' ' ')"
+      warn "were the sensors publishing? check with: bash scripts/car.sh info"
+    fi
   else
     warn "no bag was written"
   fi
