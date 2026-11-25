@@ -240,7 +240,10 @@ cmd_drive() {
   load_topics
   detect
   [ -n "$CAM" ] || die "no camera topics: is the camera driver running?"
-  has_topic /cones/blue && warn "/cones/blue already exists: is 'car.sh yolo' still running? Stop it first (the launch starts its own YOLO)."
+  # the dashboard subscribes to /cones/blue, so only a PUBLISHER means another YOLO is running
+  if has_topic /cones/blue && [ "$(publishers /cones/blue)" -gt 0 ] 2> /dev/null; then
+    warn "something already publishes /cones/blue: is 'car.sh yolo' still running? Stop it first (the launch starts its own YOLO)."
+  fi
   source_rrstack
   echo "[car] AUTONOMOUS DRIVING, max $speed m/s, camera $CAM"
   echo "[car]   - supervisors agreed?  - track clear?  - someone holding the joypad, ready to release?"
