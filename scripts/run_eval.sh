@@ -67,10 +67,24 @@ WORLD_NAME="$(sed -n 's/.*<world[[:space:]]\+name="\([^"]*\)".*/\1/p' "$WORLD_FI
 mkdir -p "$OUT"
 BATCH="$(date +%Y%m%d_%H%M%S)"
 
+SIM_PATTERN="ign gazebo|gz sim|ros2 launch chocapinto_eval|ros2 launch roboracer_planning"
+
 cleanup_sim() {   # leftovers from a previous or interrupted run
-  pkill -f "ign gazebo" 2>/dev/null; pkill -f "gz sim" 2>/dev/null
-  pkill -f "ros2 launch chocapinto_eval" 2>/dev/null; pkill -f "ros2 launch roboracer_planning" 2>/dev/null
-  sleep 2
+  pkill -f "$SIM_PATTERN" 2>/dev/null
+  local _
+  for _ in 1 2 3 4 5 6 7 8 9 10; do                     # up to 5 s to exit politely
+    pgrep -f "$SIM_PATTERN" > /dev/null || return 0
+    sleep 0.5
+  done
+  # A hung Gazebo ignores SIGTERM; a second Gazebo on the same world then never starts.
+  warn "simulation processes still alive after 5 s, forcing them to stop:"
+  pgrep -af "$SIM_PATTERN" | sed 's/^/[eval]   /' >&2
+  pkill -9 -f "$SIM_PATTERN" 2>/dev/null
+  sleep 1
+  if pgrep -f "$SIM_PATTERN" > /dev/null; then
+    warn "could not stop them (kill -9 them by hand, or restart WSL: wsl --shutdown in PowerShell)"
+    return 1
+  fi
 }
 
 set_rtf_when_ready() {   # background: wait for Gazebo, then change its speed limit
@@ -104,7 +118,7 @@ for k in $(seq 1 "$RUNS"); do
   echo
   log "=== run $k/$RUNS: $RUN ==="
   bash "$REPO_DIR/scripts/check_rrstack_clean.sh" || { warn "guard failed: stopping"; exit 1; }
-  cleanup_sim
+  cleanup_sim || { warn "a previous simulation is still running: not starting $RUN"; exit 1; }
   mkdir -p "$RUN_DIR"
 
   RTF_PID=""
