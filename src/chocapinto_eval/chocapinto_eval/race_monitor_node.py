@@ -196,7 +196,9 @@ class RaceMonitorNode(Node):
         t = self._sim_time()
         if not force and self._status_mark is not None and wall - self._status_mark[1] < 1.0:
             return
-        if self._status_mark is not None and wall > self._status_mark[1]:
+        # RTF over the interval since the last status; the final (forced) status comes
+        # right after the previous one, so a too-short interval keeps the last value
+        if self._status_mark is not None and wall - self._status_mark[1] >= 0.5:
             self._status_rtf = (t - self._status_mark[0]) / (wall - self._status_mark[1])
         self._status_mark = (t, wall)
         s = self.monitor.summary()

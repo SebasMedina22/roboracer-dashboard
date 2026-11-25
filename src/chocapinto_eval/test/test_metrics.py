@@ -180,6 +180,19 @@ def test_contacts_counted_once_while_touching(cones):
     assert mon.summary()['contacts'] == 2
 
 
+def test_contact_time_is_relative_to_run_start(cones):
+    xy, colors, names = cones
+    cone = xy[0]
+    mon = RunMonitor(*cones, params=MonitorParams(stop_on_contact=False, laps_target=99))
+    far = (cone[0] - 1.5, cone[1], 0.0)
+    touch = (cone[0] - 0.45, cone[1], 0.0)
+    mon.update(5.0, far)                  # sim clock does not start at 0 (Gazebo start-up)
+    mon.update(6.0, far)
+    mon.update(7.0, touch)
+    ev = mon.summary()['contact_events'][0]
+    assert ev['t'] == pytest.approx(2.0)  # same time base as lap times and events.csv
+
+
 def test_stuck_detected(cones, centre_path):
     poses, _ = drive(centre_path, laps=0.2)          # ~22 m
     mon = RunMonitor(*cones, params=MonitorParams(stop_on_contact=False))

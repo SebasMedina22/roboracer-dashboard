@@ -305,5 +305,7 @@ class RunMonitor:
             'odom_drift_xy': None if self._drift[0] is None else round(self._drift[0], 3),
             'odom_drift_yaw_deg': None if self._drift[1] is None else round(self._drift[1], 2),
             'laps': [asdict(lap) for lap in self.laps],
-            'contact_events': [asdict(e) for e in self.events if e.kind == 'contact'],
+            # times relative to the start of the run, like lap times and events.csv
+            'contact_events': [dict(asdict(e), t=round(e.t - (self._t0 or 0.0), 3))
+                               for e in self.events if e.kind == 'contact'],
         }
