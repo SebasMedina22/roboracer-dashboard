@@ -125,6 +125,16 @@ for 5 s), or at the time limit. Each run folder has `summary.json` (laps, lap ti
 contacts, minimum clearance, odometry drift), `trajectory.csv`, `events.csv`, `run.png` and
 `launch.log`; each batch adds `batch_<date>.csv` with one line per run.
 
+
+### Several runs together (`scripts/plot_batch.py`)
+
+```bash
+cd /mnt/c/Users/Asus/Documents/avai_runs
+python3 ~/dashboard_ws/scripts/plot_batch.py 20261124_225001_run1 20261124_225001_run2 ...   # run folders
+```
+
+Writes `analysis/batch_analysis.png` (all trajectories, zoom on the critical zone, clearance and
+lane position along the lap, odometry drift), `batch_summary.json` and `batch_summary.md`.
 ## 3. Newer Ubuntu (24.04, 26.04, …): use distrobox
 
 ```bash
