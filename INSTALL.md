@@ -63,7 +63,9 @@ ros2 topic list                                   # note the real topic names fi
 ros2 launch roboracer_dashboard dashboard.launch.py
 ```
 
-On the laptop open **<http://192.168.3.2:8000/?car>**. `?car` selects the RealSense camera topic (`/camera/realsense2_camera/color/image_raw`). Any topic can be overridden in the URL if `ros2 topic list` shows other names, e.g. `?car&scan=/scan_filtered` or `?camera=/some/image_raw` (keys: `camera`, `scan`, `odom`, `map`, `tf`).
+On the laptop open **<http://192.168.3.2:8000/?car>**. `?car` selects the RealSense camera topic (`/camera/realsense2_camera/color/image_raw`). Any topic can be overridden in the URL if `ros2 topic list` shows other names, e.g. `?car&scan=/scan_filtered` or `?camera=/some/image_raw` (keys: `camera`, `scan`, `odom`, `map`, `tf`, `status`, `rosout`, `blue`, `yellow`, `waypoints`).
+
+The LiDAR panel also draws what the cone pipeline sees: YOLO's cones (`/cones/blue`, `/cones/yellow`) as blue/yellow dots and Delaunay's path (`/waypoints`) as a magenta line. Detections older than 1 s disappear, and the cones are drawn even without `/scan` (e.g. only `yolo_node` running).
 
 Record sensor data for offline development (stop with Ctrl+C):
 

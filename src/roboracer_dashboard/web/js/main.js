@@ -10,6 +10,7 @@ import { createLogsPanel } from './logs.js';
 // Default topic names (simulation). Any of them can be overridden from the URL,
 // without editing code:
 //   http://<host>:8000/?camera=/camera/realsense2_camera/color/image_raw&scan=/scan
+// Keys: camera, scan, odom, map, tf, status, rosout, blue, yellow, waypoints.
 // `?car` switches to the real car's RealSense camera topic (other topics stay the same).
 const DEFAULT_TOPICS = {
   camera: '/camera/color/image_raw',
@@ -19,6 +20,9 @@ const DEFAULT_TOPICS = {
   tf: '/tf',
   status: '/eval/status',
   rosout: '/rosout',
+  blue: '/cones/blue',          // yolo_node detections, drawn on the LiDAR panel
+  yellow: '/cones/yellow',
+  waypoints: '/waypoints',      // delaunay_node path, drawn on the LiDAR panel
 };
 const CAR_TOPICS = { camera: '/camera/realsense2_camera/color/image_raw' };
 
@@ -88,6 +92,9 @@ ros.subscribe(TOPICS.scan, 'sensor_msgs/msg/LaserScan',     lidar.update,     10
 ros.subscribe(TOPICS.odom, 'nav_msgs/msg/Odometry',         odom.update,      50);
 ros.subscribe(TOPICS.map,  'nav_msgs/msg/OccupancyGrid',    map.updateMap,    2000);
 ros.subscribe(TOPICS.tf,   'tf2_msgs/msg/TFMessage',        map.updateTf,     50);
+ros.subscribe(TOPICS.blue,   'geometry_msgs/msg/PoseArray',   (m) => lidar.updateCones('blue', m),   100);
+ros.subscribe(TOPICS.yellow, 'geometry_msgs/msg/PoseArray',   (m) => lidar.updateCones('yellow', m), 100);
+ros.subscribe(TOPICS.waypoints, 'geometry_msgs/msg/PoseArray', lidar.updateWaypoints, 100);
 ros.subscribe(TOPICS.status, 'std_msgs/msg/String',         monitor.update,   0);
 // every log line matters: no throttling, and a queue so bursts are not dropped
 ros.subscribe(TOPICS.rosout, 'rcl_interfaces/msg/Log',      logs.add,         0, 200);

@@ -5,7 +5,7 @@ Web dashboard for the RoboRacer (AVAI Lab, RUB). Shows the 4 things Task 3 asks 
 | Panel | Topic | Type |
 |---|---|---|
 | Camera | `/camera/color/image_raw` | `sensor_msgs/Image` (via web_video_server, MJPEG) |
-| LiDAR | `/scan` | `sensor_msgs/LaserScan` |
+| LiDAR + cones | `/scan` + `/cones/blue`, `/cones/yellow`, `/waypoints` | `sensor_msgs/LaserScan`, `geometry_msgs/PoseArray` |
 | Odometry | `/odom` | `nav_msgs/Odometry` |
 | Occupancy grid | `/map` + `/tf` | `nav_msgs/OccupancyGrid`, `tf2_msgs/TFMessage` |
 
