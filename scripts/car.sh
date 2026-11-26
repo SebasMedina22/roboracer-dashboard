@@ -32,10 +32,18 @@ warn() { echo "[car] WARNING: $*" >&2; }
 die()  { echo "[car] ERROR: $*" >&2; exit 1; }
 usage() { sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
+# ROS/colcon setup files read unset variables (e.g. COLCON_TRACE, AMENT_TRACE_SETUP_FILES):
+# source them with 'set -u' switched off.
+source_setup() {
+  set +u
+  # shellcheck disable=SC1090
+  source "$1"
+  set -u
+}
+
 # ROS 2 in this shell (ssh sessions often have nothing sourced)
 if ! command -v ros2 > /dev/null 2>&1; then
-  # shellcheck disable=SC1091
-  [ -f /opt/ros/humble/setup.bash ] && source /opt/ros/humble/setup.bash
+  [ -f /opt/ros/humble/setup.bash ] && source_setup /opt/ros/humble/setup.bash
 fi
 command -v ros2 > /dev/null 2>&1 || die "ros2 not found (is ROS 2 Humble installed on this machine?)"
 
@@ -116,8 +124,7 @@ free_gb() { df -Pk "$SESSION" | awk 'NR==2 {printf "%d", $4 / 1048576}'; }
 
 source_rrstack() {
   [ -f "$RRSTACK_SETUP" ] || die "rrstack not found at $RRSTACK_SETUP (ask the supervisors where it is; then RRSTACK_SETUP=/path/to/install/setup.bash bash scripts/car.sh ...)"
-  # shellcheck disable=SC1090
-  source "$RRSTACK_SETUP"
+  source_setup "$RRSTACK_SETUP"
 }
 
 # ---------------------------------------------------------------- commands
@@ -155,8 +162,7 @@ cmd_info() {
 
 cmd_dashboard() {
   [ -f "$DASHBOARD_SETUP" ] || die "dashboard not built: cd $REPO_DIR && colcon build --symlink-install --packages-select roboracer_dashboard"
-  # shellcheck disable=SC1090
-  source "$DASHBOARD_SETUP"
+  source_setup "$DASHBOARD_SETUP"
   local ip
   ip="$(hostname -I 2> /dev/null | awk '{print $1}')"
   say "open on the laptop:  http://${ip:-<jetson-ip>}:8000/?car"
