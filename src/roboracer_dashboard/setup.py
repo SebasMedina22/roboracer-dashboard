@@ -27,6 +27,7 @@ setup(
     entry_points={
         'console_scripts': [
             'web_server = roboracer_dashboard.web_server:main',
+            'video_server = roboracer_dashboard.video_server:main',
         ],
     },
 )

@@ -30,14 +30,14 @@ def rosapi_or_warning():
     return Node(package='rosapi', executable='rosapi_node', name='rosapi', output='screen')
 
 
-def video_or_warning():
-    # Optional: without it only the camera panel stays empty (e.g. on a car where
-    # we cannot install packages).
-    if not installed('web_video_server'):
-        return LogInfo(msg='[dashboard] web_video_server not installed: camera panel off '
-                           '(sudo apt install ros-humble-web-video-server)')
-    return Node(package='web_video_server', executable='web_video_server',
-                name='web_video_server', parameters=[{'port': 8080}], output='screen')
+def video_server():
+    # web_video_server if installed; otherwise our Python stand-in (same URL on :8080),
+    # e.g. on the car's Jetson where we cannot install packages.
+    if installed('web_video_server'):
+        return Node(package='web_video_server', executable='web_video_server',
+                    name='web_video_server', parameters=[{'port': 8080}], output='screen')
+    return Node(package='roboracer_dashboard', executable='video_server',
+                name='video_server', parameters=[{'port': 8080}], output='screen')
 
 
 def generate_launch_description():
@@ -60,8 +60,8 @@ def generate_launch_description():
         # Optional: without rosapi the page simply uses the default / URL topic names.
         rosapi_or_warning(),
 
-        # sensor_msgs/Image -> MJPEG video over HTTP (http://<host>:8080); optional
-        video_or_warning(),
+        # sensor_msgs/Image -> MJPEG video over HTTP (http://<host>:8080)
+        video_server(),
 
         # Our page (http://<host>:8000)
         Node(
