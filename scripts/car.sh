@@ -182,11 +182,19 @@ cmd_record() {
   load_topics
   detect
   local topics=()
+  # Raw depth, its calibration and the IMU are recorded too when they exist: on the car the
+  # aligned depth may be listed but empty, and the raw one lets us align it offline.
+  local extra=()
+  if [ -n "$CAM" ]; then
+    extra=("$CAM/depth/image_rect_raw" "$CAM/depth/camera_info" "$CAM/extrinsics/depth_to_color")
+  fi
   for t in /scan /odom /tf /tf_static /drive /joy "$COLOR" "$INFO" "$DEPTH" \
-           /cones/blue /cones/yellow /waypoints; do
+           "${extra[@]}" /sensors/imu /cones/blue /cones/yellow /waypoints; do
     [ -n "$t" ] || continue
+    case " ${topics[*]} " in *" $t "*) continue ;; esac          # no duplicates
     if has_topic "$t"; then topics+=("$t"); else
-      case "$t" in /joy|/drive|/cones/*|/waypoints) ;; *) warn "not recording $t (topic does not exist)" ;; esac
+      case "$t" in /joy|/drive|/cones/*|/waypoints|/sensors/imu|*/depth/*|*/extrinsics/*) ;;
+        *) warn "not recording $t (topic does not exist)" ;; esac
     fi
   done
   [ ${#topics[@]} -gt 0 ] || die "none of the topics to record exist"
@@ -214,7 +222,7 @@ cmd_record() {
     # sensor topics that got nothing: the bag is useless for them
     local empty
     empty="$(grep -oE 'Topic: [^ ]+ \| Type: [^ ]+ \| Count: 0\b' "$dir/bag_info.txt" \
-             | awk '{print $2}' | grep -vE '^/(tf_static|drive|joy|cones/.*|waypoints)$')"
+             | awk '{print $2}' | grep -vE '^/(tf_static|drive|joy|cones/.*|waypoints)$|/extrinsics/')"
     if [ -n "$empty" ]; then
       warn "NO messages recorded on: $(echo "$empty" | tr '\n' ' ')"
       warn "were the sensors publishing? check with: bash scripts/car.sh info"
